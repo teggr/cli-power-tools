@@ -51,7 +51,7 @@ public class AppTest {
     @Test
     void testDirectoriesCreated() {
         String appName = uniqueAppName();
-        app = new App.Builder().appName(appName).build();
+        app = new App.Builder().appName(appName).withHomeDirectory().withLocalDirectory().build();
         Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
         Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
         assertTrue(Files.exists(homeDir), "Home directory should exist");
@@ -59,9 +59,29 @@ public class AppTest {
     }
 
     @Test
-    void testSaveAndLoadHomeProperties() {
+    void testSaveAndLoadHomePropertiesThrowsIfNoHomeDir() {
         String appName = uniqueAppName();
         app = new App.Builder().appName(appName).build();
+        Properties props = new Properties();
+        props.setProperty("foo", "bar");
+        assertThrows(RuntimeException.class, () -> app.saveHomeProperties(props), "Should throw if home dir does not exist");
+        assertThrows(RuntimeException.class, () -> app.loadHomeProperties(), "Should throw if home dir does not exist");
+    }
+
+    @Test
+    void testSaveAndLoadLocalPropertiesThrowsIfNoLocalDir() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).build();
+        Properties props = new Properties();
+        props.setProperty("baz", "qux");
+        assertThrows(RuntimeException.class, () -> app.saveLocalProperties(props), "Should throw if local dir does not exist");
+        assertThrows(RuntimeException.class, () -> app.loadLocalProperties(), "Should throw if local dir does not exist");
+    }
+
+    @Test
+    void testSaveAndLoadHomeProperties() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).withHomeDirectory().build();
         Properties props = new Properties();
         props.setProperty("foo", "bar");
         app.saveHomeProperties(props);
@@ -72,7 +92,7 @@ public class AppTest {
     @Test
     void testSaveAndLoadLocalProperties() {
         String appName = uniqueAppName();
-        app = new App.Builder().appName(appName).build();
+        app = new App.Builder().appName(appName).withLocalDirectory().build();
         Properties props = new Properties();
         props.setProperty("baz", "qux");
         app.saveLocalProperties(props);
@@ -83,7 +103,7 @@ public class AppTest {
     @Test
     void testMergedProperties() {
         String appName = uniqueAppName();
-        app = new App.Builder().appName(appName).build();
+        app = new App.Builder().appName(appName).withHomeDirectory().withLocalDirectory().build();
         Properties homeProps = new Properties();
         homeProps.setProperty("key", "home");
         app.saveHomeProperties(homeProps);
@@ -97,11 +117,51 @@ public class AppTest {
     @Test
     void testDeleteApp() {
         String appName = uniqueAppName();
-        app = new App.Builder().appName(appName).build();
+        app = new App.Builder().appName(appName).withHomeDirectory().withLocalDirectory().build();
         app.deleteApp();
         Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
         Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
         assertFalse(Files.exists(homeDir), "Home directory should be deleted");
         assertFalse(Files.exists(localDir), "Local directory should be deleted");
+    }
+
+    @Test
+    void testNoDirectoriesCreatedByDefault() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).build();
+        Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
+        Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
+        assertFalse(Files.exists(homeDir), "Home directory should NOT exist by default");
+        assertFalse(Files.exists(localDir), "Local directory should NOT exist by default");
+    }
+
+    @Test
+    void testOnlyHomeDirectoryCreated() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).withHomeDirectory().build();
+        Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
+        Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
+        assertTrue(Files.exists(homeDir), "Home directory should exist");
+        assertFalse(Files.exists(localDir), "Local directory should NOT exist");
+    }
+
+    @Test
+    void testOnlyLocalDirectoryCreated() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).withLocalDirectory().build();
+        Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
+        Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
+        assertFalse(Files.exists(homeDir), "Home directory should NOT exist");
+        assertTrue(Files.exists(localDir), "Local directory should exist");
+    }
+
+    @Test
+    void testBothDirectoriesCreated() {
+        String appName = uniqueAppName();
+        app = new App.Builder().appName(appName).withHomeDirectory().withLocalDirectory().build();
+        Path homeDir = Paths.get(System.getProperty("user.home"), "." + appName);
+        Path localDir = Paths.get(System.getProperty("user.dir"), "." + appName);
+        assertTrue(Files.exists(homeDir), "Home directory should exist");
+        assertTrue(Files.exists(localDir), "Local directory should exist");
     }
 }

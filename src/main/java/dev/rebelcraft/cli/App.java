@@ -26,37 +26,50 @@ public class App {
     private final Path localPropertiesFile;
 
     // Private constructor for builder
-    private App(String appName, Path homeDir, Path localDir, Path homePropertiesFile, Path localPropertiesFile) {
+    private App(String appName, Path homeDir, Path localDir, Path homePropertiesFile, Path localPropertiesFile, boolean createHomeDir, boolean createLocalDir) {
         this.appName = appName;
         this.homeDir = homeDir;
         this.localDir = localDir;
         this.homePropertiesFile = homePropertiesFile;
         this.localPropertiesFile = localPropertiesFile;
-        createDirectories();
-    }
-
-    private void createDirectories() {
-        try {
-            Files.createDirectories(homeDir);
-            Files.createDirectories(localDir);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to create directories", e);
+        if (createHomeDir) {
+            try { Files.createDirectories(homeDir); } catch (IOException e) { throw new RuntimeException("Failed to create home directory", e); }
+        }
+        if (createLocalDir) {
+            try { Files.createDirectories(localDir); } catch (IOException e) { throw new RuntimeException("Failed to create local directory", e); }
         }
     }
 
+    // Update the original constructor to not create directories by default
+    private App(String appName, Path homeDir, Path localDir, Path homePropertiesFile, Path localPropertiesFile) {
+        this(appName, homeDir, localDir, homePropertiesFile, localPropertiesFile, false, false);
+    }
+
     public Properties loadHomeProperties() {
+        if (!Files.exists(homeDir)) {
+            throw new RuntimeException("Home directory does not exist: " + homeDir);
+        }
         return loadProperties(homePropertiesFile);
     }
 
     public Properties loadLocalProperties() {
+        if (!Files.exists(localDir)) {
+            throw new RuntimeException("Local directory does not exist: " + localDir);
+        }
         return loadProperties(localPropertiesFile);
     }
 
     public void saveHomeProperties(Properties props) {
+        if (!Files.exists(homeDir)) {
+            throw new RuntimeException("Home directory does not exist: " + homeDir);
+        }
         saveProperties(homePropertiesFile, props);
     }
 
     public void saveLocalProperties(Properties props) {
+        if (!Files.exists(localDir)) {
+            throw new RuntimeException("Local directory does not exist: " + localDir);
+        }
         saveProperties(localPropertiesFile, props);
     }
 
@@ -123,6 +136,8 @@ public class App {
         private String localDirOverride;
         private String homePropertiesFileName = "app.properties";
         private String localPropertiesFileName = "app.properties";
+        private boolean createHomeDir = false;
+        private boolean createLocalDir = false;
 
         public Builder appName(String appName) {
             this.appName = appName;
@@ -149,19 +164,38 @@ public class App {
             return this;
         }
 
+        /**
+         * Enable creation of the app home directory and its properties file.
+         */
+        public Builder withHomeDirectory() {
+            this.createHomeDir = true;
+            return this;
+        }
+
+        /**
+         * Enable creation of the app local directory and its properties file.
+         */
+        public Builder withLocalDirectory() {
+            this.createLocalDir = true;
+            return this;
+        }
+
         public App build() {
             String appNameToUse = appName != null ? appName : "app";
             Path homeDir = homeDirOverride != null ? Paths.get(homeDirOverride) : Paths.get(System.getProperty("user.home"), "." + appNameToUse);
             Path localDir = localDirOverride != null ? Paths.get(localDirOverride) : Paths.get(System.getProperty("user.dir"), "." + appNameToUse);
             Path homePropertiesFile = homeDir.resolve(homePropertiesFileName);
             Path localPropertiesFile = localDir.resolve(localPropertiesFileName);
-            return new App(appNameToUse, homeDir, localDir, homePropertiesFile, localPropertiesFile);
+            App app = new App(appNameToUse, homeDir, localDir, homePropertiesFile, localPropertiesFile, createHomeDir, createLocalDir);
+            return app;
         }
     }
 
     public static void main(String[] args) {
         App app = new App.Builder()
             .appName("cli-power-tools")
+            .withHomeDirectory()
+            .withLocalDirectory()
             .build();
         System.out.println("Home directory: " + app.homeDir);
         System.out.println("Local directory: " + app.localDir);
