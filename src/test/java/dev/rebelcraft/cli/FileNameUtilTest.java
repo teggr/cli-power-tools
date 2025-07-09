@@ -6,21 +6,49 @@ import static org.junit.jupiter.api.Assertions.*;
 public class FileNameUtilTest {
     @Test
     void testEscapeName_AllSafe() {
-        assertEquals("my-app.1", FileNameUtil.escapeName("my-app.1"));
+        // given: a safe name
+        String input = "my-app.1";
+
+        // when: escaping the name
+        String result = FileNameUtil.escapeName(input);
+
+        // then: the result should be unchanged
+        assertEquals("my-app.1", result);
     }
 
     @Test
     void testEscapeName_UnsafeChars() {
-        assertEquals("my_app_1_", FileNameUtil.escapeName("my/app:1?"));
+        // given: a name with unsafe characters
+        String input = "my/app:1?";
+
+        // when: escaping the name
+        String result = FileNameUtil.escapeName(input);
+
+        // then: unsafe characters should be replaced with underscores
+        assertEquals("my_app_1_", result);
     }
 
     @Test
     void testEscapeName_Empty() {
-        assertEquals("", FileNameUtil.escapeName(""));
+        // given: an empty string
+        String input = "";
+
+        // when: escaping the name
+        String result = FileNameUtil.escapeName(input);
+
+        // then: the result should be empty
+        assertEquals("", result);
     }
 
     @Test
     void testEscapeName_OnlyUnsafe() {
-        assertEquals("___", FileNameUtil.escapeName("!@#"));
+        // given: a string with only unsafe characters
+        String input = "!@#";
+
+        // when: escaping the name
+        String result = FileNameUtil.escapeName(input);
+
+        // then: all characters should be replaced with underscores
+        assertEquals("___", result);
     }
 }
