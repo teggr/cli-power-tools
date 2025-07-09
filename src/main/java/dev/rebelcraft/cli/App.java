@@ -133,34 +133,12 @@ public class App {
     public static class Builder {
         private String appName;
         private String homeDirOverride;
-        private String localDirOverride;
-        private String homePropertiesFileName = "app.properties";
-        private String localPropertiesFileName = "app.properties";
         private boolean createHomeDir = false;
         private boolean createLocalDir = false;
+        private String workingDirOverride;
 
         public Builder appName(String appName) {
             this.appName = appName;
-            return this;
-        }
-
-        public Builder homeDir(String homeDir) {
-            this.homeDirOverride = homeDir;
-            return this;
-        }
-
-        public Builder localDir(String localDir) {
-            this.localDirOverride = localDir;
-            return this;
-        }
-
-        public Builder homePropertiesFileName(String fileName) {
-            this.homePropertiesFileName = fileName;
-            return this;
-        }
-
-        public Builder localPropertiesFileName(String fileName) {
-            this.localPropertiesFileName = fileName;
             return this;
         }
 
@@ -180,13 +158,24 @@ public class App {
             return this;
         }
 
+        /**
+         * Override the working directory used as the parent for the local directory.
+         */
+        public Builder withWorkingDirectory(String workingDir) {
+            this.workingDirOverride = workingDir;
+            return this;
+        }
+
         public App build() {
             String appNameToUse = appName != null ? appName : "app";
-            Path homeDir = homeDirOverride != null ? Paths.get(homeDirOverride) : Paths.get(System.getProperty("user.home"), "." + appNameToUse);
-            Path localDir = localDirOverride != null ? Paths.get(localDirOverride) : Paths.get(System.getProperty("user.dir"), "." + appNameToUse);
-            Path homePropertiesFile = homeDir.resolve(homePropertiesFileName);
-            Path localPropertiesFile = localDir.resolve(localPropertiesFileName);
-            App app = new App(appNameToUse, homeDir, localDir, homePropertiesFile, localPropertiesFile, createHomeDir, createLocalDir);
+            String safeAppName = FileNameUtil.escapeName(appNameToUse);
+            Path homeDir = homeDirOverride != null ? Paths.get(homeDirOverride) : Paths.get(System.getProperty("user.home"), "." + safeAppName);
+            Path localParentDir = workingDirOverride != null ? Paths.get(workingDirOverride) : Paths.get(System.getProperty("user.dir"));
+            Path localDir = localParentDir.resolve("." + safeAppName);
+            String propertiesFileName = safeAppName + ".properties";
+            Path homePropertiesFile = homeDir.resolve(propertiesFileName);
+            Path localPropertiesFile = localDir.resolve(propertiesFileName);
+            App app = new App(safeAppName, homeDir, localDir, homePropertiesFile, localPropertiesFile, createHomeDir, createLocalDir);
             return app;
         }
     }
@@ -201,6 +190,7 @@ public class App {
         System.out.println("Local directory: " + app.localDir);
         // Example usage
         Properties props = app.getMergedProperties();
+        app.saveLocalProperties(props);
         System.out.println("Merged properties: " + props);
 
         app.deleteApp();

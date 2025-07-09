@@ -164,4 +164,44 @@ public class AppTest {
         assertTrue(Files.exists(homeDir), "Home directory should exist");
         assertTrue(Files.exists(localDir), "Local directory should exist");
     }
+
+    @Test
+    void testLocalDirectoryWithWorkingDirectoryOverride() throws Exception {
+        String appName = uniqueAppName();
+        Path customWorkingDir = Files.createTempDirectory("apptest-custom-working-dir");
+        app = new App.Builder()
+            .appName(appName)
+            .withWorkingDirectory(customWorkingDir.toString())
+            .withLocalDirectory()
+            .build();
+        Path expectedLocalDir = customWorkingDir.resolve("." + appName);
+        assertTrue(Files.exists(expectedLocalDir), "Local directory should exist in the custom working directory");
+        // Clean up
+        app.deleteApp();
+        Files.walk(customWorkingDir).sorted(java.util.Comparator.reverseOrder()).forEach(path -> {
+            try { Files.delete(path); } catch (Exception ignored) {}
+        });
+    }
+
+    @Test
+    void testAppNameEscapingInDirectoriesAndFiles() {
+        String unsafeName = "my/app:name?*|<>";
+        String safeName = FileNameUtil.escapeName(unsafeName);
+        app = new App.Builder().appName(unsafeName).withHomeDirectory().withLocalDirectory().build();
+        Path homeDir = Paths.get(System.getProperty("user.home"), "." + safeName);
+        Path localDir = Paths.get(System.getProperty("user.dir"), "." + safeName);
+        Path homeProps = homeDir.resolve(safeName + ".properties");
+        Path localProps = localDir.resolve(safeName + ".properties");
+        assertTrue(Files.exists(homeDir), "Escaped home directory should exist");
+        assertTrue(Files.exists(localDir), "Escaped local directory should exist");
+        assertTrue(Files.exists(homeProps), "Escaped home properties file should exist after save");
+        assertTrue(Files.exists(localProps), "Escaped local properties file should exist after save");
+        // Save to both to create the files
+        Properties props = new Properties();
+        props.setProperty("foo", "bar");
+        app.saveHomeProperties(props);
+        app.saveLocalProperties(props);
+        assertTrue(Files.exists(homeProps), "Escaped home properties file should exist after save");
+        assertTrue(Files.exists(localProps), "Escaped local properties file should exist after save");
+    }
 }
